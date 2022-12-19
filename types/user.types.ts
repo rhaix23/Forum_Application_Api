@@ -1,6 +1,7 @@
 import { Model, Types } from "mongoose";
 
 export interface IUser {
+  _id: Types.ObjectId;
   username: string;
   password: string;
   role: "user" | "admin";
@@ -29,7 +30,4 @@ export interface IUserMethods extends Model<IUser> {
 
 export type UserModel = Model<IUser, {}, IUserMethods>;
 
-export interface IUserInformation
-  extends Omit<IUser, "password" | "refreshToken"> {
-  _id: Types.ObjectId;
-}
+export type IUserInformation = Omit<IUser, "password" | "refreshToken">;
