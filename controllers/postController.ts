@@ -1,5 +1,7 @@
 import { Request, Response } from "express";
+import { NotFoundError } from "../errors/notFoundError.js";
 import { Post } from "../models/postModel.js";
+import { IPost } from "../types/post.types.js";
 
 // @route   GET /api/post
 // @desc    Get all posts
@@ -14,7 +16,7 @@ export const getPosts = async (req: Request, res: Response) => {
 // @access  Public
 export const getSubcategoryPosts = async (
   req: Request<{ id: string }>,
-  res: Response
+  res: Response<{ posts: IPost[] }>
 ) => {
   const { id } = req.params;
   const posts = await Post.find({ subcategory: id })
@@ -33,7 +35,7 @@ export const getSubcategoryPosts = async (
 // @access  Public
 export const getSinglePost = async (
   req: Request<{ id: string }>,
-  res: Response
+  res: Response<{ post: IPost }>
 ) => {
   const { id } = req.params;
   const post = await Post.findById(id)
@@ -44,12 +46,16 @@ export const getSinglePost = async (
     .populate("likes")
     .populate("dislikes");
 
+  if (!post) {
+    throw new NotFoundError("Post not found");
+  }
+
   res.status(200).json({ post });
 };
 
 export const getUserPosts = async (
   req: Request<{ id: string }>,
-  res: Response
+  res: Response<{ posts: IPost[] }>
 ) => {
   const { id } = req.params;
   const posts = await Post.find({ user: id })
@@ -72,7 +78,7 @@ export const createPost = async (
     never,
     { title: string; body: string; subcategoryId: string }
   >,
-  res: Response
+  res: Response<{ post: IPost }>
 ) => {
   const { title, body, subcategoryId } = req.body;
 
@@ -91,7 +97,7 @@ export const createPost = async (
 // @access  Private
 export const updatePost = async (
   req: Request<{ id: string }, never, { title: string; body: string }>,
-  res: Response
+  res: Response<{ post: IPost }>
 ) => {
   const { id } = req.params;
   const { title, body } = req.body;
@@ -102,7 +108,7 @@ export const updatePost = async (
   });
 
   if (!post) {
-    return res.status(404).json({ message: "Post not found" });
+    throw new NotFoundError("Post not found");
   }
 
   post.title = title;

@@ -1,13 +1,6 @@
-import mongoose, { Types } from "mongoose";
+import mongoose from "mongoose";
+import { IRating } from "../types/rating.types.js";
 import { Post } from "./postModel.js";
-
-export interface IRating {
-  post: Types.ObjectId;
-  user: Types.ObjectId;
-  value: number;
-  createdAt: Date;
-  updatedAt: Date;
-}
 
 const RatingSchema = new mongoose.Schema<IRating>(
   {

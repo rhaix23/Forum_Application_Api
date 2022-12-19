@@ -16,6 +16,8 @@ import { verifyRole } from "../middleware/verifyRole.js";
 
 const router = Router();
 
+router.post("/logout", logout);
+
 router.get("/refresh", handleRefreshToken);
 
 router.get("/me", verifyAuth, me);
@@ -27,8 +29,6 @@ router
   .get(getSingleUser)
   .patch(verifyAuth, updateUser)
   .delete(verifyRole, deleteUser);
-
-router.post("/logout", logout);
 
 router.post("/register", register);
 

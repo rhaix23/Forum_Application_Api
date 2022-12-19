@@ -1,22 +1,26 @@
 import { Request, Response } from "express";
 import { BadRequestError } from "../errors/badRequestError.js";
 import { UnAuthenticatedError } from "../errors/unauthenticatedError.js";
-import { Comment, IComment } from "../models/commentModel.js";
+import { Comment } from "../models/commentModel.js";
+import { IComment } from "../types/comment.types.js";
 
 // @route   GET /api/comment
 // @desc    Get all comments
 // @access  Private
-export const getComments = async (req: Request, res: Response) => {
+export const getComments = async (
+  req: Request,
+  res: Response<{ comments: IComment[] }>
+) => {
   const comments = await Comment.find({});
   res.status(200).json({ comments });
 };
 
 // @route   GET /api/comment/post/:id
 // @desc    Get all comments in a post
-// @access  Private
+// @access  Public
 export const getSinglePostComments = async (
   req: Request<{ id: string }>,
-  res: Response
+  res: Response<{ comments: IComment[] }>
 ) => {
   const { id } = req.params;
 
@@ -38,7 +42,7 @@ export const getSinglePostComments = async (
 // @access  Private
 export const createComment = async (
   req: Request<never, never, { body: string; postId: string }>,
-  res: Response
+  res: Response<{ comment: IComment }>
 ) => {
   const { body, postId } = req.body;
 
@@ -101,7 +105,7 @@ export const deleteComment = async (
 
   await comment.remove();
 
-  res.sendStatus(204);
+  res.sendStatus(200);
 };
 
 export const getUserComments = async (

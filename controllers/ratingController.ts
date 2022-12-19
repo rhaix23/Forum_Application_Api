@@ -1,15 +1,22 @@
 import { Request, Response } from "express";
 import { BadRequestError } from "../errors/badRequestError.js";
 import { Rating } from "../models/ratingModel.js";
+import { IRating } from "../types/rating.types.js";
 
+//@desc Get user ratings
+//@route GET /api/ratings/user/:id
+//@access Public
 export const getSingleUserRatings = async (
   req: Request<{ id: string }>,
-  res: Response
+  res: Response<{ ratings: IRating[] }>
 ) => {
   const ratings = await Rating.find({ user: req.params.id });
-  res.status(200).json(ratings);
+  res.status(200).json({ ratings });
 };
 
+//@desc Rate post
+//@route POST /api/ratings
+//@access Private
 export const ratePost = async (
   req: Request<never, never, { postId: string; value: number }>,
   res: Response
@@ -31,9 +38,12 @@ export const ratePost = async (
     value,
   });
 
-  res.status(201).json({ rating });
+  res.sendStatus(201);
 };
 
+//@desc Update rating
+//@route PATCH /api/ratings/:id
+//@access Private
 export const updateRating = async (
   req: Request<{ id: string }, never, { value: number }>,
   res: Response
@@ -54,9 +64,12 @@ export const updateRating = async (
   rating.value = value;
   await rating.save();
 
-  res.status(200).json({ rating });
+  res.sendStatus(200);
 };
 
+//@desc Delete rating
+//@route DELETE /api/ratings/:id
+//@access Private
 export const deleteRating = async (
   req: Request<{ id: string }>,
   res: Response

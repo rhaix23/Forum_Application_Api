@@ -1,12 +1,5 @@
-import mongoose, { Types } from "mongoose";
-
-export interface IComment {
-  body: string;
-  post: Types.ObjectId;
-  user: Types.ObjectId;
-  createdAt: Date;
-  updatedAt: Date;
-}
+import mongoose from "mongoose";
+import { IComment } from "../types/comment.types.js";
 
 const CommentSchema = new mongoose.Schema<IComment>(
   {
@@ -14,6 +7,7 @@ const CommentSchema = new mongoose.Schema<IComment>(
       type: String,
       required: true,
       trim: true,
+      maxLength: 1200,
     },
     post: {
       type: mongoose.Schema.Types.ObjectId,
@@ -32,7 +26,6 @@ const CommentSchema = new mongoose.Schema<IComment>(
 );
 
 CommentSchema.post("save", async function (doc) {
-  // Only push the comment to the post if it's a new comment
   if (doc.createdAt === doc.updatedAt) {
     await mongoose.model("Post").updateOne(
       {

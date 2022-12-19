@@ -45,7 +45,7 @@ const UserSchema = new mongoose.Schema<IUser, UserModel, IUserMethods>(
     about: {
       type: String,
       default: "",
-      maxlength: 1000,
+      maxlength: 1100,
       trim: true,
     },
     email: {

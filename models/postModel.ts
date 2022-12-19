@@ -1,16 +1,5 @@
-import mongoose, { Types } from "mongoose";
-
-export interface IPost {
-  title: string;
-  body: string;
-  subcategory: Types.ObjectId;
-  user: Types.ObjectId;
-  comments: Types.ObjectId[];
-  likes: Types.ObjectId[];
-  dislikes: Types.ObjectId[];
-  createdAt: Date;
-  updatedAt: Date;
-}
+import mongoose from "mongoose";
+import { IPost } from "../types/post.types.js";
 
 const PostSchema = new mongoose.Schema<IPost>(
   {
@@ -23,6 +12,7 @@ const PostSchema = new mongoose.Schema<IPost>(
       type: String,
       required: true,
       trim: true,
+      maxLength: 3500,
     },
     user: {
       type: mongoose.Schema.Types.ObjectId,
@@ -59,7 +49,6 @@ const PostSchema = new mongoose.Schema<IPost>(
 );
 
 PostSchema.post("save", async function (doc) {
-  // Only push the post to the subcategory if it's a new post
   if (doc.createdAt === doc.updatedAt) {
     await mongoose.model("Subcategory").updateOne(
       {

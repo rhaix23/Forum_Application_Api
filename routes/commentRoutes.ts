@@ -7,13 +7,13 @@ import {
   getUserComments,
   updateComment,
 } from "../controllers/commentController.js";
-
 import { verifyAuth } from "../middleware/verifyAuth.js";
 import { verifyRole } from "../middleware/verifyRole.js";
 
 const router = Router();
 
 router.route("/").get(verifyRole, getComments).post(verifyAuth, createComment);
+
 router
   .route("/:id")
   .patch(verifyAuth, updateComment)
