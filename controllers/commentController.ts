@@ -1,7 +1,10 @@
 import { Request, Response } from "express";
 import { BadRequestError } from "../errors/badRequestError.js";
+import { ForbiddenError } from "../errors/forbiddenError.js";
 import { UnAuthenticatedError } from "../errors/unauthenticatedError.js";
 import { Comment } from "../models/commentModel.js";
+import { Post } from "../models/postModel.js";
+import { User } from "../models/userModel.js";
 import { IComment } from "../types/comment.types.js";
 
 // @route   GET /api/comment
@@ -11,7 +14,10 @@ export const getComments = async (
   req: Request,
   res: Response<{ comments: IComment[] }>
 ) => {
-  const comments = await Comment.find({});
+  const comments = await Comment.find({}).populate("post").populate({
+    path: "user",
+    select: "-password -refreshToken",
+  });
   res.status(200).json({ comments });
 };
 
@@ -45,6 +51,16 @@ export const createComment = async (
   res: Response<{ comment: IComment }>
 ) => {
   const { body, postId } = req.body;
+
+  const post = await Post.findById(postId);
+
+  if (!post) {
+    throw new BadRequestError("Post not found");
+  }
+
+  if (post.isLocked) {
+    throw new ForbiddenError("Post is locked");
+  }
 
   const comment = await Comment.create({
     body,
@@ -94,18 +110,23 @@ export const deleteComment = async (
   const { id } = req.params;
 
   const comment = await Comment.findById(id);
+  const user = await User.findById(req.user!.userId);
 
   if (!comment) {
     throw new BadRequestError("Comment not found");
   }
 
-  if (comment.user.toString() !== req.user!.userId) {
-    throw new BadRequestError("Unauthorized");
+  if (
+    comment.user.toString() !== req.user!.userId &&
+    user &&
+    user.role !== "admin"
+  ) {
+    throw new ForbiddenError("Unauthorized to delete this comment");
   }
 
   await comment.remove();
 
-  res.sendStatus(200);
+  res.status(200).json({ id: comment._id });
 };
 
 export const getUserComments = async (
