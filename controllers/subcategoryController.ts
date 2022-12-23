@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { Subcategory } from "../models/subcategoryModel.js";
 import { BadRequestError } from "../errors/badRequestError.js";
 import { ISubcategory } from "../types/subcategory.types.js";
+import { Types } from "mongoose";
 
 // @route   GET /api/category
 // @desc    Get all subcategories
@@ -10,7 +11,7 @@ export const getSubCategories = async (
   req: Request,
   res: Response<{ subcategories: ISubcategory[] }>
 ) => {
-  const subcategories = await Subcategory.find({});
+  const subcategories = await Subcategory.find({}).populate("category");
   res.status(200).json({ subcategories });
 };
 
@@ -46,11 +47,16 @@ export const createSubcategory = async (
 // @desc    Update a subcategory
 // @access  Private
 export const updateSubcategory = async (
-  req: Request<{ id: string }, never, { name: string; description: string }>,
+  req: Request<
+    { id: string },
+    never,
+    { name: string; description: string; categoryId: Types.ObjectId }
+  >,
   res: Response<{ subcategory: ISubcategory }>
 ) => {
+  console.log("track");
   const { id } = req.params;
-  const { name, description } = req.body;
+  const { name, description, categoryId } = req.body;
 
   const subcategory = await Subcategory.findById(id);
 
@@ -60,7 +66,8 @@ export const updateSubcategory = async (
 
   subcategory.name = name;
   subcategory.description = description;
-  await subcategory.save();
+  subcategory.category = categoryId;
+  await (await subcategory.save()).populate("category");
 
   res.status(200).json({ subcategory });
 };
@@ -82,5 +89,5 @@ export const deleteSubcategory = async (
 
   await subcategory.remove();
 
-  res.sendStatus(200);
+  res.status(200).json({ id: subcategory._id });
 };

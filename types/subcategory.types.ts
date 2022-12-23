@@ -8,4 +8,5 @@ export interface ISubcategory {
   posts: Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
+  _oldCategory: Types.ObjectId;
 }
