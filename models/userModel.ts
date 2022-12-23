@@ -63,6 +63,10 @@ const UserSchema = new mongoose.Schema<IUser, UserModel, IUserMethods>(
       default: "",
       trim: true,
     },
+    isDisabled: {
+      type: Boolean,
+      default: false,
+    },
     refreshToken: {
       type: String,
       default: "",

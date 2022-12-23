@@ -10,6 +10,7 @@ import {
   updateUser,
   changePassword,
   getSingleUser,
+  updateAccountStatus,
 } from "../controllers/userController.js";
 import { verifyAuth } from "../middleware/verifyAuth.js";
 import { verifyRole } from "../middleware/verifyRole.js";
@@ -29,6 +30,8 @@ router
   .get(getSingleUser)
   .patch(verifyAuth, updateUser)
   .delete(verifyRole, deleteUser);
+
+router.patch("/updatestatus/:id", verifyRole, updateAccountStatus);
 
 router.post("/register", register);
 

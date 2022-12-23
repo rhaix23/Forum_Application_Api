@@ -4,6 +4,8 @@ import { UnAuthenticatedError } from "../errors/unauthenticatedError.js";
 import { BadRequestError } from "../errors/badRequestError.js";
 import { IUserInformation } from "../types/user.types.js";
 import { User } from "../models/userModel.js";
+import { ForbiddenError } from "../errors/forbiddenError.js";
+import { NotFoundError } from "../errors/notFoundError.js";
 
 //@desc     Get all users
 //@route    GET /api/users
@@ -90,6 +92,7 @@ export const register = async (
       email: user.email,
       linkedin: user.linkedin,
       github: user.github,
+      isDisabled: user.isDisabled,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     },
@@ -114,6 +117,10 @@ export const login = async (
 
   if (!isMatch) {
     throw new UnAuthenticatedError("Invalid credentials");
+  }
+
+  if (user.isDisabled) {
+    throw new ForbiddenError("User account is disabled");
   }
 
   const { accessToken, refreshToken } = user.createAuthTokens(
@@ -152,6 +159,7 @@ export const login = async (
       email: user.email,
       linkedin: user.linkedin,
       github: user.github,
+      isDisabled: user.isDisabled,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     },
@@ -202,13 +210,22 @@ export const updateUser = async (
       email: string;
       linkedin: string;
       github: string;
+      isDisabled: boolean;
     }
   >,
   res: Response<{ user: IUserInformation }>
 ) => {
   const { id } = req.params;
-  const { name, position, workingAt, about, email, linkedin, github } =
-    req.body;
+  const {
+    name,
+    position,
+    workingAt,
+    about,
+    email,
+    linkedin,
+    github,
+    isDisabled,
+  } = req.body;
 
   const user = await User.findById(id).select("-password -refreshToken");
 
@@ -217,7 +234,7 @@ export const updateUser = async (
   }
 
   if (user._id.toString() !== req.user!.userId) {
-    throw new UnAuthenticatedError("You are not authorized");
+    throw new UnAuthenticatedError("Unauthorized access");
   }
 
   user.name = name;
@@ -227,6 +244,7 @@ export const updateUser = async (
   user.email = email;
   user.linkedin = linkedin;
   user.github = github;
+  user.isDisabled = isDisabled;
   await user.save();
 
   res.status(200).json({ user });
@@ -282,31 +300,27 @@ export const changePassword = async (
 export const handleRefreshToken = async (req: Request, res: Response) => {
   const cookies = req.cookies;
 
-  if (!cookies.refreshToken) {
-    throw new UnAuthenticatedError("Unauthorized");
-  }
-
-  const refreshToken = cookies.refreshToken;
-
-  const user = await User.findOne({ refreshToken });
-
-  if (!user) {
-    throw new UnAuthenticatedError("Unauthorized");
-  }
-
   try {
+    const refreshToken = cookies.refreshToken;
+
     const decoded = jwt.verify(
       refreshToken,
       process.env.JWT_REFRESH_SECRET as string
     ) as JwtPayload;
 
+    const user = await User.findOne({ refreshToken });
+
+    if (!user) {
+      throw new BadRequestError("Invalid token");
+    }
+
     if (user.username !== decoded.username) {
-      throw new UnAuthenticatedError("Unauthorized");
+      throw new ForbiddenError("Unauthorized access");
     }
 
     const accessToken = user.createToken(
       process.env.JWT_TOKEN_SECRET as string,
-      "30s"
+      process.env.JWT_TOKEN_EXPIRATION as string
     );
     res.cookie("accessToken", accessToken, {
       httpOnly: true,
@@ -317,10 +331,8 @@ export const handleRefreshToken = async (req: Request, res: Response) => {
 
     res.sendStatus(200);
   } catch (error) {
-    return res.status(403).json(error);
+    return res.status(400).json({ msg: "No token provided" });
   }
-
-  res.sendStatus(200);
 };
 
 //@desc     Get logged in user's information
@@ -355,4 +367,22 @@ export const me = async (
   } catch (error) {
     throw new UnAuthenticatedError("Invalid Token");
   }
+};
+
+export const updateAccountStatus = async (
+  req: Request<{ id: string }>,
+  res: Response<{ user: IUserInformation }>
+) => {
+  const { id } = req.params;
+
+  const user = await User.findById(id).select("-password -refreshToken");
+
+  if (!user) {
+    throw new NotFoundError("User not found");
+  }
+
+  user.isDisabled = !user.isDisabled;
+  await user.save();
+
+  res.status(200).json({ user });
 };

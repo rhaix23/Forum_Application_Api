@@ -12,6 +12,7 @@ export interface IUser {
   email: string;
   github: string;
   linkedin: string;
+  isDisabled: boolean;
   refreshToken: string;
   createdAt: Date;
   updatedAt: Date;
