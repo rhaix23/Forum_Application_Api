@@ -34,7 +34,7 @@ export const createCategory = async (
 
   const category = await Category.create({ name });
 
-  res.status(201).json({ category });
+  res.sendStatus(201);
 };
 
 // @route   PATCH /api/category/:id
@@ -47,7 +47,10 @@ export const updateCategory = async (
   const { id } = req.params;
   const { name } = req.body;
 
-  const category = await Category.findById(id);
+  const category = await Category.findById(id).populate({
+    path: "subcategories",
+    select: "-posts",
+  });
 
   if (!category) {
     throw new BadRequestError("Category not found");
@@ -76,5 +79,5 @@ export const deleteCategory = async (
 
   await category.remove();
 
-  res.sendStatus(200);
+  res.status(200).json({ id: category._id });
 };
