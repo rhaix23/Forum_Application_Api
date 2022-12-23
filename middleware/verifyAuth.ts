@@ -11,14 +11,11 @@ const verifyAuth = (req: Request, res: Response, next: NextFunction) => {
 
   const token = cookies.accessToken;
 
-  const decoded = jwt.verify(
-    token,
-    process.env.JWT_TOKEN_SECRET as string
-  ) as JwtPayload;
-
-  if (!decoded) {
-    throw new UnAuthenticatedError("Unauthorized");
-  } else {
+  try {
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_TOKEN_SECRET as string
+    ) as JwtPayload;
     req.user = {
       userId: decoded.userId,
       username: decoded.username,
@@ -26,6 +23,8 @@ const verifyAuth = (req: Request, res: Response, next: NextFunction) => {
     };
 
     next();
+  } catch (error) {
+    throw new UnAuthenticatedError("Unauthorized");
   }
 };
 
