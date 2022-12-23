@@ -7,12 +7,14 @@ import {
   updatePost,
   getSinglePost,
   getUserPosts,
+  removePost,
 } from "../controllers/postController.js";
 import { verifyAuth } from "../middleware/verifyAuth.js";
+import { verifyRole } from "../middleware/verifyRole.js";
 
 const router = Router();
 
-router.route("/").get(getPosts).post(verifyAuth, createPost);
+router.route("/").get(verifyRole, getPosts).post(verifyAuth, createPost);
 
 router
   .route("/:id")
@@ -23,5 +25,7 @@ router
 router.get("/subcategory/:id", getSubcategoryPosts);
 
 router.get("/user/:id", getUserPosts);
+
+router.patch("/remove/:id", verifyAuth, removePost);
 
 export { router as postRouter };

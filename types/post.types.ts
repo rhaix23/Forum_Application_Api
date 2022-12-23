@@ -9,6 +9,9 @@ export interface IPost {
   comments: Types.ObjectId[];
   likes: Types.ObjectId[];
   dislikes: Types.ObjectId[];
+  isLocked: boolean;
+  isRemoved: boolean;
   createdAt: Date;
   updatedAt: Date;
+  _oldSubcategory: Types.ObjectId;
 }

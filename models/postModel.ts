@@ -42,14 +42,63 @@ const PostSchema = new mongoose.Schema<IPost>(
         ref: "Rating",
       },
     ],
+    isLocked: {
+      type: Boolean,
+      default: false,
+    },
+    isRemoved: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
   }
 );
 
+PostSchema.pre("save", async function (this) {
+  if (this.createdAt === this.updatedAt) {
+    await mongoose.model("Subcategory").updateOne(
+      {
+        _id: this.subcategory,
+      },
+      {
+        $pull: { posts: this._id },
+      }
+    );
+  }
+
+  if (this.isModified("subcategory")) {
+    this.$locals.subcategoryIsModified = true;
+  }
+});
+
+PostSchema.post("init", function () {
+  this._oldSubcategory = this.subcategory;
+});
+
 PostSchema.post("save", async function (doc) {
   if (doc.createdAt === doc.updatedAt) {
+    await mongoose.model("Subcategory").updateOne(
+      {
+        _id: doc.subcategory,
+      },
+      {
+        $push: { posts: doc._id },
+      }
+    );
+  }
+
+  if (doc.createdAt !== doc.updatedAt && doc.$locals.subcategoryIsModified) {
+    await mongoose.model("Subcategory").updateOne(
+      {
+        _id: doc._oldSubcategory,
+      },
+      {
+        $pull: { posts: doc._id },
+      }
+    );
+
     await mongoose.model("Subcategory").updateOne(
       {
         _id: doc.subcategory,
