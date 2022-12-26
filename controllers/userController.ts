@@ -2,19 +2,22 @@ import { Request, Response } from "express";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import { UnAuthenticatedError } from "../errors/unauthenticatedError.js";
 import { BadRequestError } from "../errors/badRequestError.js";
-import { IUserInformation } from "../types/user.types.js";
+import { UserInformationQuery, UserQuery } from "../types/user.types.js";
 import { User } from "../models/userModel.js";
 import { ForbiddenError } from "../errors/forbiddenError.js";
 import { NotFoundError } from "../errors/notFoundError.js";
+import { verifyObjectId } from "../utils/verifyObjectId.js";
 
 //@desc     Get all users
 //@route    GET /api/users
 //@access   Private
 export const getUsers = async (
   req: Request,
-  res: Response<{ users: IUserInformation[] }>
+  res: Response<{ users: UserQuery[] }>
 ) => {
-  const users = await User.find().select("-password -refreshToken");
+  const users = await User.find()
+    .select("_id username role isDisabled createdAt")
+    .lean();
   res.status(200).json({ users });
 };
 
@@ -23,13 +26,15 @@ export const getUsers = async (
 //@access   Public
 export const getSingleUser = async (
   req: Request<{ id: string }>,
-  res: Response<{ user: IUserInformation }>
+  res: Response<{ user: UserInformationQuery }>
 ) => {
   const { id } = req.params;
-  const user = await User.findById(id).select("-password -refreshToken");
 
+  verifyObjectId(id);
+
+  const user = await User.findById(id).select("-password -refreshToken").lean();
   if (!user) {
-    throw new BadRequestError("User not found");
+    throw new NotFoundError("User not found");
   }
 
   res.status(200).json({ user });
@@ -40,42 +45,26 @@ export const getSingleUser = async (
 //@access   Public
 export const register = async (
   req: Request<never, never, { username: string; password: string }, never>,
-  res: Response<{ user: IUserInformation }>
+  res: Response<{ user: UserQuery }>
 ) => {
   const { username, password } = req.body;
 
-  if (!username || !password) {
-    throw new BadRequestError("Please provide username and password");
-  }
-
-  const userExists = await User.findOne({ username });
-
-  if (userExists) {
-    throw new BadRequestError("User with that username already exists");
-  }
-
   const user = await User.create({ username, password });
 
-  const { accessToken, refreshToken } = user.createAuthTokens(
-    process.env.JWT_TOKEN_SECRET as string,
-    process.env.JWT_TOKEN_EXPIRATION as string,
-    process.env.JWT_REFRESH_SECRET as string,
-    process.env.JWT_REFRESH_EXPIRATION as string
-  );
-
+  const { accessToken, refreshToken } = user.createAuthTokens();
   user.refreshToken = refreshToken;
   await user.save();
 
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true,
-    // secure: true,
+    secure: false,
     sameSite: "none",
     maxAge: 1000 * 60 * 60 * 24, // 1 day
   });
 
   res.cookie("accessToken", accessToken, {
     httpOnly: true,
-    // secure: true,
+    secure: false,
     sameSite: "none",
     maxAge: 1000 * 60 * 60, // 1 hour
   });
@@ -85,16 +74,8 @@ export const register = async (
       _id: user._id,
       username: user.username,
       role: user.role,
-      name: user.name,
-      about: user.about,
-      position: user.position,
-      workingAt: user.workingAt,
-      email: user.email,
-      linkedin: user.linkedin,
-      github: user.github,
       isDisabled: user.isDisabled,
       createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
     },
   });
 };
@@ -104,45 +85,37 @@ export const register = async (
 //@access   Public
 export const login = async (
   req: Request<never, never, { username: string; password: string }, never>,
-  res: Response<{ user: IUserInformation }>
+  res: Response<{ user: UserQuery }>
 ) => {
   const { username, password } = req.body;
+
   const user = await User.findOne({ username });
-
   if (!user) {
-    throw new UnAuthenticatedError("Invalid credentials");
+    throw new NotFoundError("User not found");
   }
 
-  const isMatch = await user.comparePassword(password);
-
-  if (!isMatch) {
+  const isValidPassword = await user.comparePassword(password);
+  if (!isValidPassword) {
     throw new UnAuthenticatedError("Invalid credentials");
   }
-
   if (user.isDisabled) {
     throw new ForbiddenError("User account is disabled");
   }
 
-  const { accessToken, refreshToken } = user.createAuthTokens(
-    process.env.JWT_TOKEN_SECRET as string,
-    process.env.JWT_TOKEN_EXPIRATION as string,
-    process.env.JWT_REFRESH_SECRET as string,
-    process.env.JWT_REFRESH_EXPIRATION as string
-  );
-
+  const { accessToken, refreshToken } = user.createAuthTokens();
   user.refreshToken = refreshToken;
   await user.save();
 
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true,
-    // secure: true,
+    secure: false,
     sameSite: "none",
     maxAge: 1000 * 60 * 60 * 24, // 1 day
   });
 
   res.cookie("accessToken", accessToken, {
     httpOnly: true,
-    // secure: true,
+    secure: false,
     sameSite: "none",
     maxAge: 1000 * 60 * 60, // 1 hour
   });
@@ -152,16 +125,8 @@ export const login = async (
       _id: user._id,
       username: user.username,
       role: user.role,
-      name: user.name,
-      about: user.about,
-      position: user.position,
-      workingAt: user.workingAt,
-      email: user.email,
-      linkedin: user.linkedin,
-      github: user.github,
       isDisabled: user.isDisabled,
       createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
     },
   });
 };
@@ -171,26 +136,37 @@ export const login = async (
 //@access   Public
 export const logout = async (req: Request, res: Response) => {
   const cookies = req.cookies;
-
-  if (!cookies.refreshToken) {
-    return res.sendStatus(400);
-  }
-
   const refreshToken = cookies.refreshToken;
 
   const user = await User.findOne({ token: refreshToken });
 
   if (!user) {
-    res.clearCookie("refreshToken", { httpOnly: true });
-    res.clearCookie("accessToken", { httpOnly: true });
+    res.clearCookie("refreshToken", {
+      httpOnly: true,
+      secure: false,
+      sameSite: "none",
+    });
+    res.clearCookie("accessToken", {
+      httpOnly: true,
+      secure: false,
+      sameSite: "none",
+    });
     return res.sendStatus(200);
   }
 
   user.refreshToken = "";
   await user.save();
 
-  res.clearCookie("refreshToken", { httpOnly: true });
-  res.clearCookie("accessToken", { httpOnly: true });
+  res.clearCookie("refreshToken", {
+    httpOnly: true,
+    secure: false,
+    sameSite: "none",
+  });
+  res.clearCookie("accessToken", {
+    httpOnly: true,
+    secure: false,
+    sameSite: "none",
+  });
 
   res.sendStatus(200);
 };
@@ -213,7 +189,7 @@ export const updateUser = async (
       isDisabled: boolean;
     }
   >,
-  res: Response<{ user: IUserInformation }>
+  res: Response<{ user: UserInformationQuery }>
 ) => {
   const { id } = req.params;
   const {
@@ -227,14 +203,16 @@ export const updateUser = async (
     isDisabled,
   } = req.body;
 
+  verifyObjectId(id);
+
   const user = await User.findById(id).select("-password -refreshToken");
 
   if (!user) {
-    throw new BadRequestError("User not found");
+    throw new NotFoundError("User not found");
   }
 
   if (user._id.toString() !== req.user!.userId) {
-    throw new UnAuthenticatedError("Unauthorized access");
+    throw new ForbiddenError();
   }
 
   user.name = name;
@@ -250,20 +228,17 @@ export const updateUser = async (
   res.status(200).json({ user });
 };
 
+//@desc     Delete user
+//@route    DELETE /api/users/:id
+//@access   Private
 export const deleteUser = async (
   req: Request<{ id: string }>,
   res: Response
 ) => {
   const { id } = req.params;
 
-  const user = User.findById(id);
-
-  if (!user) {
-    throw new BadRequestError("User not found");
-  }
-
-  await user.remove();
-
+  verifyObjectId(id);
+  await User.findByIdAndDelete(id);
   res.sendStatus(200);
 };
 
@@ -279,7 +254,7 @@ export const changePassword = async (
   const user = await User.findById(req.user!.userId);
 
   if (!user) {
-    throw new BadRequestError("User not found");
+    throw new NotFoundError("User not found");
   }
 
   const passwordsMatch = await user.comparePassword(currentPassword);
@@ -308,38 +283,36 @@ export const handleRefreshToken = async (req: Request, res: Response) => {
       process.env.JWT_REFRESH_SECRET as string
     ) as JwtPayload;
 
-    const user = await User.findOne({ refreshToken });
+    const user = await User.findById(decoded.userId);
 
     if (!user) {
-      throw new BadRequestError("Invalid token");
-    }
-
-    if (user.username !== decoded.username) {
-      throw new ForbiddenError("Unauthorized access");
+      throw new BadRequestError("Token is invalid");
     }
 
     const accessToken = user.createToken(
       process.env.JWT_TOKEN_SECRET as string,
       process.env.JWT_TOKEN_EXPIRATION as string
     );
+
     res.cookie("accessToken", accessToken, {
       httpOnly: true,
-      // secure: true,
+      secure: false,
       sameSite: "none",
       maxAge: 1000 * 60 * 60, // 1 hour
     });
 
     res.sendStatus(200);
   } catch (error) {
-    return res.status(400).json({ msg: "No token provided" });
+    return res.status(400).json({ msg: "Token not found" });
   }
 };
 
 //@desc     Get logged in user's information
 //@route    GET /api/users/me
+//@access   Private
 export const me = async (
   req: Request,
-  res: Response<{ user: IUserInformation }>
+  res: Response<{ user: UserInformationQuery }>
 ) => {
   const cookies = req.cookies;
 
@@ -355,9 +328,9 @@ export const me = async (
       process.env.JWT_TOKEN_SECRET as string
     ) as JwtPayload;
 
-    const user = await User.findById(decoded.userId.trim()).select(
-      "-password -refreshToken"
-    );
+    const user = await User.findById(decoded.userId)
+      .select("-password -refreshToken")
+      .lean();
 
     if (!user) {
       throw new UnAuthenticatedError("Unauthorized");
@@ -369,9 +342,11 @@ export const me = async (
   }
 };
 
+//@desc     Update account status
+//@route    PATCH /api/users/updatestatus/:id/
 export const updateAccountStatus = async (
   req: Request<{ id: string }>,
-  res: Response<{ user: IUserInformation }>
+  res: Response<{ user: UserInformationQuery }>
 ) => {
   const { id } = req.params;
 

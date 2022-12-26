@@ -1,4 +1,4 @@
-import { IUser } from "../user.types.js";
+import { IUserInformation } from "../user.types.js";
 
 declare global {
   namespace Express {

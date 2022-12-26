@@ -1,9 +1,18 @@
 import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
-import { IUser, IUserMethods, UserModel } from "../types/user.types.js";
+import {
+  IUserInformation,
+  IUserMethods,
+  UserModel,
+} from "../types/user.types.js";
+import { verifyObjectId } from "../utils/verifyObjectId.js";
 
-const UserSchema = new mongoose.Schema<IUser, UserModel, IUserMethods>(
+const UserSchema = new mongoose.Schema<
+  IUserInformation,
+  UserModel,
+  IUserMethods
+>(
   {
     username: {
       type: String,
@@ -87,26 +96,26 @@ UserSchema.pre("save", async function () {
 
 UserSchema.methods.createToken = function (secret: string, expiration: string) {
   const token = jwt.sign(
-    { userId: this._id, username: this.username, role: this.role },
+    {
+      userId: this._id,
+      username: this.username,
+      role: this.role,
+      isDisabled: this.isDisabled,
+    },
     secret,
     { expiresIn: expiration }
   );
   return token;
 };
 
-UserSchema.methods.createAuthTokens = function (
-  accessTokenSecret: string,
-  accessTokenExpiration: string,
-  refreshTokenSecret: string,
-  refreshTokenExpiration: string
-) {
+UserSchema.methods.createAuthTokens = function () {
   const accessToken = this.createToken(
-    accessTokenSecret,
-    accessTokenExpiration
+    process.env.JWT_TOKEN_SECRET as string,
+    process.env.JWT_TOKEN_EXPIRATION as string
   );
   const refreshToken = this.createToken(
-    refreshTokenSecret,
-    refreshTokenExpiration
+    process.env.JWT_REFRESH_SECRET as string,
+    process.env.JWT_REFRESH_EXPIRATION as string
   );
   return { accessToken, refreshToken };
 };
@@ -116,4 +125,7 @@ UserSchema.methods.comparePassword = async function (password: string) {
   return isMatch;
 };
 
-export const User = mongoose.model<IUser, UserModel>("User", UserSchema);
+export const User = mongoose.model<IUserInformation, UserModel>(
+  "User",
+  UserSchema
+);
