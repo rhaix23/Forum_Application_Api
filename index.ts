@@ -1,5 +1,5 @@
 // Import dependencies
-import express, { Request, Response } from "express";
+import express, { NextFunction, Request, Response } from "express";
 import dotenv from "dotenv";
 import morgan from "morgan";
 import cookieParser from "cookie-parser";
@@ -28,22 +28,28 @@ import { ratingRouter } from "./routes/ratingRoute.js";
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+const allowedOrigins = [
+  "https://forum-application.vercel.app",
+  "http://localhost:5173",
+  "http://localhost:3000",
+];
+
 // Middlewares
-app.use(morgan("tiny"));
+if (process.env.NODE_ENV === "development") {
+  app.use(morgan("tiny"));
+}
 app.use(express.urlencoded({ extended: false }));
+app.use(
+  cors({
+    origin: allowedOrigins,
+    credentials: true,
+  })
+);
 app.use(express.json());
 app.use(cookieParser());
 app.use(helmet());
 app.use(mongoSanitize());
 app.use(compression());
-app.use(
-  cors({
-    origin: "http://localhost:5173",
-    credentials: true,
-  })
-);
-
-app.disable("x-powered-by");
 
 app.get("/", (req: Request, res: Response) => {
   res.send("API is running...");
