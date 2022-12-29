@@ -8,7 +8,7 @@ const verifyAuth = (req: Request, res: Response, next: NextFunction) => {
   const accessToken = cookies.accessToken;
 
   if (!cookies.accessToken) {
-    throw new UnAuthenticatedError("Token not found");
+    throw new UnAuthenticatedError("User not authenticated, please login");
   }
 
   try {

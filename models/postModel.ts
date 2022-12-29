@@ -10,7 +10,6 @@ const PostSchema = new mongoose.Schema<IPost>(
     },
     body: {
       type: String,
-      required: true,
       trim: true,
       maxLength: 3500,
     },
@@ -42,6 +41,10 @@ const PostSchema = new mongoose.Schema<IPost>(
         ref: "Rating",
       },
     ],
+    ratingCount: {
+      type: Number,
+      default: 0,
+    },
     isLocked: {
       type: Boolean,
       default: false,
