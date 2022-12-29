@@ -29,20 +29,28 @@ const RatingSchema = new mongoose.Schema<IRating>(
 RatingSchema.post("save", async function (doc) {
   if (doc.createdAt === doc.updatedAt) {
     if (doc.value === 1) {
-      await Post.findByIdAndUpdate(doc.post, { $push: { likes: doc._id } });
+      await Post.findByIdAndUpdate(doc.post, {
+        $push: { likes: doc._id },
+        $inc: { ratingCount: 1 },
+      });
     } else if (doc.value === -1) {
-      await Post.findByIdAndUpdate(doc.post, { $push: { dislikes: doc._id } });
+      await Post.findByIdAndUpdate(doc.post, {
+        $push: { dislikes: doc._id },
+        $inc: { ratingCount: -1 },
+      });
     }
   } else {
     if (doc.value === 1) {
       await Post.findByIdAndUpdate(doc.post, {
         $pull: { dislikes: doc._id },
         $push: { likes: doc._id },
+        $inc: { ratingCount: 2 },
       });
     } else if (doc.value === -1) {
       await Post.findByIdAndUpdate(doc.post, {
         $pull: { likes: doc._id },
         $push: { dislikes: doc._id },
+        $inc: { ratingCount: -2 },
       });
     }
   }
@@ -50,9 +58,15 @@ RatingSchema.post("save", async function (doc) {
 
 RatingSchema.post("remove", async function (doc) {
   if (doc.value === 1) {
-    await Post.findByIdAndUpdate(doc.post, { $pull: { likes: doc._id } });
+    await Post.findByIdAndUpdate(doc.post, {
+      $pull: { likes: doc._id },
+      $inc: { ratingCount: -1 },
+    });
   } else {
-    await Post.findByIdAndUpdate(doc.post, { $pull: { dislikes: doc._id } });
+    await Post.findByIdAndUpdate(doc.post, {
+      $pull: { dislikes: doc._id },
+      $inc: { ratingCount: 1 },
+    });
   }
 });
 
