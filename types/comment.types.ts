@@ -1,6 +1,10 @@
-import { Document, Types } from "mongoose";
-import { IUser } from "./user.types";
+import { Types } from "mongoose";
+import { IPostIdAndTitle } from "./post.types";
+import { IUserIdAndUsername } from "./user.types";
 
+/***********************************************************
+ *                Comment Type Definitions                 *
+ * ********************************************************/
 export interface IComment {
   _id: Types.ObjectId;
   body: string;
@@ -10,11 +14,8 @@ export interface IComment {
   updatedAt: Date;
 }
 
-export interface ICommentWithUser extends Document {
-  _id: Types.ObjectId;
-  body: string;
-  post: Types.ObjectId;
-  user: IUser;
-  createdAt: Date;
-  updatedAt: Date;
+export interface ICommentWithPostAndUser
+  extends Omit<IComment, "post" | "user"> {
+  post: IPostIdAndTitle;
+  user: IUserIdAndUsername;
 }

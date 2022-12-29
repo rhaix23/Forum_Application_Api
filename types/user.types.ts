@@ -2,7 +2,11 @@ import { Model, Types } from "mongoose";
 
 export type UserRoles = "user" | "admin";
 
-/* Interface that defines the User   */
+export interface IUserIdAndUsername {
+  _id: Types.ObjectId;
+  username: string;
+}
+
 export interface IUser {
   _id: Types.ObjectId;
   username: string;
@@ -14,7 +18,6 @@ export interface IUser {
   updatedAt: Date;
 }
 
-/* Interface that defines the User  */
 export interface IUserInformation extends IUser {
   name: string;
   about: string;
@@ -25,21 +28,10 @@ export interface IUserInformation extends IUser {
   linkedin: string;
 }
 
-/* Interface that defines the User schema methods  */
 export interface IUserMethods extends Model<IUserInformation> {
   createToken: (secret: string, expiration: string) => string;
   createAuthTokens: () => { accessToken: string; refreshToken: string };
   comparePassword: (password: string) => Promise<boolean>;
 }
 
-/* Interface that defines the User model  */
 export type UserModel = Model<IUserInformation, {}, IUserMethods>;
-
-/* Interface that defines the query response for user */
-export type UserInformationQuery = Omit<
-  IUserInformation,
-  "password" | "refreshToken"
->;
-
-/* Interface that defines the query response for user */
-export type UserQuery = Omit<IUser, "password" | "refreshToken" | "updatedAt">;
