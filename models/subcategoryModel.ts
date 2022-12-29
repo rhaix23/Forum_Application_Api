@@ -7,6 +7,7 @@ const SubcategorySchema = new mongoose.Schema<ISubcategory>(
       type: String,
       required: true,
       unique: true,
+      maxlength: 32,
       trim: true,
     },
     description: {
@@ -25,6 +26,10 @@ const SubcategorySchema = new mongoose.Schema<ISubcategory>(
         ref: "Post",
       },
     ],
+    allowUsersToPost: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
@@ -54,10 +59,6 @@ SubcategorySchema.post("save", async function (doc) {
   }
 
   if (doc.createdAt !== doc.updatedAt && doc.$locals.categoryIsModified) {
-    console.log("old category", doc._oldCategory);
-    console.log("new category", doc.category);
-    console.log("doc id", doc._id);
-
     await mongoose.model("Category").updateOne(
       {
         _id: doc._oldCategory,
