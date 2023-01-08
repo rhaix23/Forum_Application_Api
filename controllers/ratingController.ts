@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { BadRequestError } from "../errors/badRequestError.js";
+import { NotFoundError } from "../errors/notFoundError.js";
 import { Rating } from "../models/ratingModel.js";
 import { IRating } from "../types/rating.types.js";
 
@@ -54,7 +55,7 @@ export const updateRating = async (
   const rating = await Rating.findById(id);
 
   if (!rating) {
-    throw new BadRequestError("Rating not found");
+    throw new NotFoundError("Rating not found");
   }
 
   if (rating.value === value) {
@@ -79,7 +80,7 @@ export const deleteRating = async (
   const rating = await Rating.findById(id);
 
   if (!rating) {
-    throw new BadRequestError("Rating not found");
+    throw new NotFoundError("Rating not found");
   }
 
   await rating.remove();

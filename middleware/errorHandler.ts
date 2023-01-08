@@ -16,7 +16,6 @@ export const errorHandler = (
     defaultError.statusCode = 400;
   }
 
-  // Duplicate key error
   if (err.code === 11000) {
     defaultError.statusCode = 400;
     defaultError.msg = `${Object.keys(err.keyValue)} field has to be unique`;
