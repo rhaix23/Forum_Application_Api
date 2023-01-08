@@ -32,13 +32,14 @@ export interface IUpdatePostRequestBody {
   isLocked: boolean;
 }
 
-export interface IGetPostsRequestQuery {
-  type?: "title" | "creator";
+export interface IQueryOptions {
+  searchBy?: "title" | "id" | "user" | "subcategory" | "username";
   value?: string;
   start?: dayjs.Dayjs;
   end?: dayjs.Dayjs;
   page?: number;
   limit?: number;
+  sort?: "-createdAt" | "+createdAt" | "-ratingCount" | "+ratingCount";
 }
 
 export interface IPostResponse {

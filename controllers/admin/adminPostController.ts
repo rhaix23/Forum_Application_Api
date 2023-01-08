@@ -1,17 +1,14 @@
 import dayjs from "dayjs";
 import { Request, Response } from "express";
-import { LeanDocument, Types } from "mongoose";
 import { NotFoundError } from "../../errors/notFoundError.js";
 import { Comment } from "../../models/commentModel.js";
 import { Post } from "../../models/postModel.js";
 import { Subcategory } from "../../models/subcategoryModel.js";
-import { User } from "../../models/userModel.js";
 import {
-  IGetPostsRequestQuery,
+  IQueryOptions,
   IPostResponse,
   IUpdatePostRequestBody,
 } from "../../types/post.types.js";
-import { IUserInformation } from "../../types/user.types.js";
 
 // @route   GET /api/admin/post
 // @desc    Get all posts
@@ -21,32 +18,17 @@ export const getPosts = async (
   res: Response<{ posts: IPostResponse[]; count: number; pages: number }>
 ) => {
   const {
-    type,
-    value,
-    start = dayjs().startOf("day"),
-    end = dayjs(),
+    searchBy = "",
+    value = "",
+    start = dayjs().subtract(1, "day"),
+    end = dayjs().endOf("day"),
     page = 1,
-    limit = 20,
-  } = req.query as IGetPostsRequestQuery;
-
-  let user:
-    | LeanDocument<IUserInformation & Required<{ _id: Types.ObjectId }>>
-    | null
-    | undefined;
-
-  if (type === "creator" && value) {
-    user = await User.findOne({
-      username: {
-        $regex: value,
-        $options: "i",
-      },
-    })
-      .select("_id")
-      .lean();
-  }
+    limit = 25,
+    sort = "createdAt",
+  } = req.query as IQueryOptions;
 
   const posts = await Post.find(
-    type === "title" && value
+    searchBy === "title"
       ? {
           title: { $regex: value, $options: "i" },
           createdAt: {
@@ -54,9 +36,25 @@ export const getPosts = async (
             $lte: end,
           },
         }
-      : type === "creator" && value
+      : searchBy === "id"
       ? {
-          user: user?._id,
+          _id: value,
+          createdAt: {
+            $gte: start,
+            $lte: end,
+          },
+        }
+      : searchBy === "user"
+      ? {
+          user: value,
+          createdAt: {
+            $gte: start,
+            $lte: end,
+          },
+        }
+      : searchBy === "subcategory"
+      ? {
+          subcategory: value,
           createdAt: {
             $gte: start,
             $lte: end,
@@ -71,7 +69,7 @@ export const getPosts = async (
   )
     .limit(limit)
     .skip((page - 1) * limit)
-    .sort({ createdAt: -1 })
+    .sort(sort)
     .select("_id title body isLocked isRemoved createdAt updatedAt")
     .populate({
       path: "user",
@@ -83,30 +81,13 @@ export const getPosts = async (
     })
     .lean();
 
-  const count = await Post.countDocuments(
-    type === "title" && value
-      ? {
-          title: { $regex: value, $options: "i" },
-          createdAt: {
-            $gte: start,
-            $lte: end,
-          },
-        }
-      : type === "creator" && value
-      ? {
-          user: user?._id,
-          createdAt: {
-            $gte: start,
-            $lte: end,
-          },
-        }
-      : {
-          createdAt: {
-            $gte: start,
-            $lte: end,
-          },
-        }
-  ).lean();
+  const count = await Post.countDocuments({
+    title: { $regex: value, $options: "i" },
+    createdAt: {
+      $gte: start,
+      $lte: end,
+    },
+  }).lean();
 
   res
     .status(200)
@@ -132,9 +113,7 @@ export const updatePost = async (
     throw new NotFoundError("Post not found");
   }
 
-  const subcategory = await Subcategory.findById(subcategoryId)
-    .select("_id")
-    .lean();
+  const subcategory = await Subcategory.findById(subcategoryId).lean();
 
   if (!subcategory) {
     throw new NotFoundError("Subcategory not found");
