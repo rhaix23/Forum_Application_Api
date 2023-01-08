@@ -7,24 +7,6 @@ import {
   ICategoryWithSubcategories,
 } from "../../types/category.types";
 
-// @route   GET /api/admin/category
-// @desc    Get all categories
-// @access  Private (admin)
-export const getCategories = async (
-  req: Request,
-  res: Response<{ categories: ICategoryWithSubcategories[] }>
-) => {
-  const categories = (await Category.find()
-    .select("_id name")
-    .populate({
-      path: "subcategories",
-      select: "_id name description",
-    })
-    .lean()) as ICategoryWithSubcategories[];
-
-  res.status(200).json({ categories });
-};
-
 // @route   POST /api/admin/category
 // @desc    Create a category
 // @access  Private (admin)
