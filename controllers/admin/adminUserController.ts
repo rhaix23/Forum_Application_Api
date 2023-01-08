@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { NotFoundError } from "../../errors/notFoundError.js";
 import { User } from "../../models/userModel.js";
 import { IUserInformation } from "../../types/user.types.js";
+import { IQueryOptions } from "../../types/post.types.js";
 
 //@desc     Get all users
 //@route    GET /api/admin/users
@@ -10,7 +11,27 @@ export const getUsers = async (
   req: Request,
   res: Response<{ users: IUserInformation[] }>
 ) => {
-  const users = await User.find().select("-password -refreshToken").lean();
+  const {
+    searchBy = "",
+    value = "",
+    page = 1,
+    limit = 25,
+    sort = "createdAt",
+  } = req.query as IQueryOptions;
+
+  const users = await User.find(
+    searchBy === "id"
+      ? { _id: value }
+      : searchBy === "username"
+      ? { username: { $regex: value, $options: "i" } }
+      : {}
+  )
+    .limit(limit)
+    .skip((page - 1) * limit)
+    .sort(sort)
+    .select("-password -refreshToken")
+    .lean();
+
   res.status(200).json({ users });
 };
 
@@ -18,7 +39,7 @@ export const getUsers = async (
 //@route    PATCH /api/admin/user/:id
 //@access   Private (admin)
 export const updateUser = async (
-  req: Request<{ id: string }, unknown, IUserInformation>,
+  req: Request<{ id: string }, never, IUserInformation>,
   res: Response
 ) => {
   const { id } = req.params;

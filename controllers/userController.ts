@@ -2,7 +2,6 @@ import { Request, Response } from "express";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import { UnAuthenticatedError } from "../errors/unauthenticatedError.js";
 import { BadRequestError } from "../errors/badRequestError.js";
-import { UserInformationQuery, UserQuery } from "../types/user.types.js";
 import { User } from "../models/userModel.js";
 import { ForbiddenError } from "../errors/forbiddenError.js";
 import { NotFoundError } from "../errors/notFoundError.js";
@@ -11,10 +10,7 @@ import { verifyObjectId } from "../utils/verifyObjectId.js";
 //@desc     Get all users
 //@route    GET /api/users
 //@access   Private
-export const getUsers = async (
-  req: Request,
-  res: Response<{ users: UserQuery[] }>
-) => {
+export const getUsers = async (req: Request, res: Response) => {
   const users = await User.find()
     .select("_id username role isDisabled createdAt")
     .lean();
@@ -26,7 +22,7 @@ export const getUsers = async (
 //@access   Public
 export const getSingleUser = async (
   req: Request<{ id: string }>,
-  res: Response<{ user: UserInformationQuery }>
+  res: Response
 ) => {
   const { id } = req.params;
 
@@ -45,7 +41,7 @@ export const getSingleUser = async (
 //@access   Public
 export const register = async (
   req: Request<never, never, { username: string; password: string }, never>,
-  res: Response<{ user: UserQuery }>
+  res: Response
 ) => {
   const { username, password } = req.body;
 
@@ -85,7 +81,7 @@ export const register = async (
 //@access   Public
 export const login = async (
   req: Request<never, never, { username: string; password: string }, never>,
-  res: Response<{ user: UserQuery }>
+  res: Response
 ) => {
   const { username, password } = req.body;
 
@@ -186,22 +182,13 @@ export const updateUser = async (
       email: string;
       linkedin: string;
       github: string;
-      isDisabled: boolean;
     }
   >,
-  res: Response<{ user: UserInformationQuery }>
+  res: Response
 ) => {
   const { id } = req.params;
-  const {
-    name,
-    position,
-    workingAt,
-    about,
-    email,
-    linkedin,
-    github,
-    isDisabled,
-  } = req.body;
+  const { name, position, workingAt, about, email, linkedin, github } =
+    req.body;
 
   verifyObjectId(id);
 
@@ -222,7 +209,6 @@ export const updateUser = async (
   user.email = email;
   user.linkedin = linkedin;
   user.github = github;
-  user.isDisabled = isDisabled;
   await user.save();
 
   res.status(200).json({ user });
@@ -310,10 +296,7 @@ export const handleRefreshToken = async (req: Request, res: Response) => {
 //@desc     Get logged in user's information
 //@route    GET /api/users/me
 //@access   Private
-export const me = async (
-  req: Request,
-  res: Response<{ user: UserInformationQuery }>
-) => {
+export const me = async (req: Request, res: Response) => {
   const cookies = req.cookies;
 
   if (!cookies.accessToken) {
@@ -329,7 +312,7 @@ export const me = async (
     ) as JwtPayload;
 
     const user = await User.findById(decoded.userId)
-      .select("-password -refreshToken")
+      .select("_id username role isDisabled createdAt")
       .lean();
 
     if (!user) {
@@ -346,7 +329,7 @@ export const me = async (
 //@route    PATCH /api/users/updatestatus/:id/
 export const updateAccountStatus = async (
   req: Request<{ id: string }>,
-  res: Response<{ user: UserInformationQuery }>
+  res: Response
 ) => {
   const { id } = req.params;
 
@@ -359,5 +342,13 @@ export const updateAccountStatus = async (
   user.isDisabled = !user.isDisabled;
   await user.save();
 
-  res.status(200).json({ user });
+  res.status(200).json({
+    user: {
+      _id: user._id,
+      username: user.username,
+      role: user.role,
+      isDisabled: user.isDisabled,
+      createdAt: user.createdAt,
+    },
+  });
 };
