@@ -2,7 +2,6 @@ import { Router } from "express";
 import {
   createComment,
   deleteComment,
-  getComments,
   getSinglePostComments,
   getUserComments,
   updateComment,
@@ -12,7 +11,7 @@ import { verifyRole } from "../middleware/verifyRole.js";
 
 const router = Router();
 
-router.route("/").get(verifyRole, getComments).post(verifyAuth, createComment);
+router.route("/").post(verifyAuth, createComment);
 
 router
   .route("/:id")

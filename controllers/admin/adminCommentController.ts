@@ -1,17 +1,47 @@
+import dayjs from "dayjs";
 import { Request, Response } from "express";
 import { Types } from "mongoose";
 import { NotFoundError } from "../../errors/notFoundError.js";
 import { Comment } from "../../models/commentModel.js";
 import { ICommentWithPostAndUser } from "../../types/comment.types.js";
+import { IQueryOptions } from "../../types/post.types.js";
 
 // @route   GET /api/admin/comment
 // @desc    Get all comments
 // @access  Private (Admin)
 export const getComments = async (
   req: Request,
-  res: Response<{ comments: ICommentWithPostAndUser[] }>
+  res: Response<{
+    comments: ICommentWithPostAndUser[];
+    count: number;
+    pages: number;
+  }>
 ) => {
-  const comments = (await Comment.find()
+  const {
+    searchBy = "",
+    value = "",
+    start = dayjs().subtract(1, "day"),
+    end = dayjs().endOf("day"),
+    page = 1,
+    limit = 25,
+    sort = "createdAt",
+  } = req.query as IQueryOptions;
+
+  const comments = (await Comment.find(
+    searchBy === "id"
+      ? {
+          _id: value,
+        }
+      : {
+          createdAt: {
+            $gte: start,
+            $lte: end,
+          },
+        }
+  )
+    .limit(limit)
+    .skip((page - 1) * limit)
+    .sort(sort)
     .populate({
       path: "post",
       select: "_id title",
@@ -21,7 +51,19 @@ export const getComments = async (
       select: "_id username",
     })
     .lean()) as ICommentWithPostAndUser[];
-  res.status(200).json({ comments });
+
+  const count = await Comment.countDocuments({
+    createdAt: {
+      $gte: start,
+      $lte: end,
+    },
+  }).lean();
+
+  res.status(200).json({
+    comments,
+    count: comments.length,
+    pages: Math.ceil(count / limit),
+  });
 };
 
 // @route   PATCH /api/admin/comment/:id
