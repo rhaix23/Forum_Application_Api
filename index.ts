@@ -59,7 +59,7 @@ app.get("/", (req: Request, res: Response) => {
 });
 
 // User routes
-app.use("/api/users", userRouter);
+app.use("/api/user", userRouter);
 app.use("/api/category", categoryRouter);
 app.use("/api/subcategory", subcategoryRouter);
 app.use("/api/post", postRouter);
