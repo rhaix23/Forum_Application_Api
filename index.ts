@@ -35,6 +35,7 @@ import { adminReportRouter } from "./routes/admin/adminReportRoutes.js";
 
 // Allowed origins configuration
 import { allowedOrigins } from "./configurations/allowedOrigins.js";
+import { apiLimiter } from "./middleware/rateLimiter.js";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -82,6 +83,8 @@ app.use(notFound);
 
 // Error handler
 app.use(errorHandler);
+
+app.use(apiLimiter);
 
 // Database connection
 const start = async () => {

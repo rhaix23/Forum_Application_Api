@@ -12,6 +12,7 @@ import {
   getSingleUser,
   updateAccountStatus,
 } from "../controllers/userController.js";
+import { loginLimiter, registerLimiter } from "../middleware/rateLimiter.js";
 import { verifyAuth } from "../middleware/verifyAuth.js";
 import { verifyRole } from "../middleware/verifyRole.js";
 
@@ -33,9 +34,9 @@ router
 
 router.patch("/updatestatus/:id", verifyRole, updateAccountStatus);
 
-router.post("/register", register);
+router.post("/register", registerLimiter, register);
 
-router.post("/login", login);
+router.post("/login", loginLimiter, login);
 
 router.post("/changepassword", verifyAuth, changePassword);
 
