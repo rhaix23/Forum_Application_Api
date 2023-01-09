@@ -30,6 +30,8 @@ import { adminUserRouter } from "./routes/admin/adminUserRoutes.js";
 import { adminCategoryRouter } from "./routes/admin/adminCategoryRoutes.js";
 import { adminSubcategoryRouter } from "./routes/admin/adminSubcategoryRoutes.js";
 import { adminCommentRouter } from "./routes/admin/adminCommentRoutes.js";
+import { reportRouter } from "./routes/reportRoutes.js";
+import { adminReportRouter } from "./routes/admin/adminReportRoutes.js";
 
 // Allowed origins configuration
 import { allowedOrigins } from "./configurations/allowedOrigins.js";
@@ -65,6 +67,7 @@ app.use("/api/subcategory", subcategoryRouter);
 app.use("/api/post", postRouter);
 app.use("/api/comment", commentRouter);
 app.use("/api/rating", ratingRouter);
+app.use("/api/report", reportRouter);
 
 // Admin routes
 app.use("/api/admin/category", verifyRole, adminCategoryRouter);
@@ -72,6 +75,7 @@ app.use("/api/admin/subcategory", verifyRole, adminSubcategoryRouter);
 app.use("/api/admin/user", verifyRole, adminUserRouter);
 app.use("/api/admin/post", verifyRole, adminPostRouter);
 app.use("/api/admin/comment", verifyRole, adminCommentRouter);
+app.use("/api/admin/report", verifyRole, adminReportRouter);
 
 // Not found handler
 app.use(notFound);
