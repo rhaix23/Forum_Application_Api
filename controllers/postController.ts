@@ -5,51 +5,51 @@ import { ForbiddenError } from "../errors/forbiddenError.js";
 import { NotFoundError } from "../errors/notFoundError.js";
 import { Post } from "../models/postModel.js";
 import { Subcategory } from "../models/subcategoryModel.js";
-import { IPost } from "../types/post.types.js";
+import { IPost, IQueryOptions } from "../types/post.types.js";
 import { verifyObjectId } from "../utils/verifyObjectId.js";
 
 // @route   GET /api/post/subcategory/:id
 // @desc    Get all posts in a subcategory
 // @access  Public
 export const getSubcategoryPosts = async (
-  req: Request<
-    { id: string },
-    never,
-    never,
-    {
-      sort: string;
-      time: "day" | "week" | "month" | "year";
-      page: number;
-      limit: number;
-    }
-  >,
+  req: Request,
   res: Response<{ posts: IPost[]; count: number; pages: number }>
 ) => {
   const { id } = req.params;
-  const sort = req.query.sort || "-createdAt";
-  const time = req.query.time || "day";
-  const page = req.query.page || 1;
-  const limit = req.query.limit || 20;
+  const {
+    searchBy = "",
+    value = "",
+    start = dayjs().subtract(1, "day"),
+    end = dayjs().endOf("day"),
+    page = 1,
+    limit = 25,
+    sort = "createdAt",
+  } = req.query as IQueryOptions;
 
-  const epochTime = dayjs.unix(0); // 1970-01-01T00:00:00.000Z
-  const currentDateAndTime = dayjs();
-  const oneTimeAgo = currentDateAndTime.subtract(1, time); // 1 day ago, 1 week ago, 1 month ago, 1 year ago
-  const startTime = oneTimeAgo.startOf(time); // date of the first day of the week, month, year
-
-  const subcategory = await Subcategory.findById(id);
+  const subcategory = await Subcategory.findById(id).populate("_id").lean();
 
   if (!subcategory) {
     throw new NotFoundError("Subcategory not found");
   }
 
-  const posts = await Post.find({
-    subcategory: id,
-    isRemoved: false,
-    createdAt: {
-      $gte: req.query.time ? startTime : epochTime,
-      $lte: currentDateAndTime,
-    },
-  })
+  const posts = await Post.find(
+    searchBy === "title"
+      ? {
+          title: { $regex: value, $options: "i" },
+          subcategory: subcategory._id,
+          createdAt: {
+            $gte: start,
+            $lte: end,
+          },
+        }
+      : {
+          subcategory: subcategory._id,
+          createdAt: {
+            $gte: start,
+            $lte: end,
+          },
+        }
+  )
     .limit(limit)
     .skip((page - 1) * limit)
     .sort(sort)
@@ -65,14 +65,24 @@ export const getSubcategoryPosts = async (
     .populate("dislikes")
     .lean();
 
-  const count = await Post.countDocuments({
-    subcategory: id,
-    isRemoved: false,
-    createdAt: {
-      $gte: req.query.time ? startTime : epochTime,
-      $lte: currentDateAndTime,
-    },
-  }).lean();
+  const count = await Post.countDocuments(
+    searchBy === "title"
+      ? {
+          title: { $regex: value, $options: "i" },
+          subcategory: subcategory._id,
+          createdAt: {
+            $gte: start,
+            $lte: end,
+          },
+        }
+      : {
+          subcategory: subcategory._id,
+          createdAt: {
+            $gte: start,
+            $lte: end,
+          },
+        }
+  ).lean();
 
   res
     .status(200)

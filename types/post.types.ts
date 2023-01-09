@@ -1,5 +1,6 @@
 import dayjs from "dayjs";
 import { Types } from "mongoose";
+import { ReportStatus, ReportType } from "./report.types";
 import { ISubcategoryIdAndName } from "./subcategory.types";
 import { IUserIdAndUsername } from "./user.types";
 
@@ -40,6 +41,8 @@ export interface IQueryOptions {
   page?: number;
   limit?: number;
   sort?: "-createdAt" | "+createdAt" | "-ratingCount" | "+ratingCount";
+  reportType?: ReportType;
+  reportStatus?: ReportStatus;
 }
 
 export interface IPostResponse {

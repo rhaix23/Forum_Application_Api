@@ -39,10 +39,6 @@ export const getPosts = async (
       : searchBy === "id"
       ? {
           _id: value,
-          createdAt: {
-            $gte: start,
-            $lte: end,
-          },
         }
       : searchBy === "user"
       ? {
@@ -81,13 +77,42 @@ export const getPosts = async (
     })
     .lean();
 
-  const count = await Post.countDocuments({
-    title: { $regex: value, $options: "i" },
-    createdAt: {
-      $gte: start,
-      $lte: end,
-    },
-  }).lean();
+  const count = await Post.countDocuments(
+    searchBy === "title"
+      ? {
+          title: { $regex: value, $options: "i" },
+          createdAt: {
+            $gte: start,
+            $lte: end,
+          },
+        }
+      : searchBy === "id"
+      ? {
+          _id: value,
+        }
+      : searchBy === "user"
+      ? {
+          user: value,
+          createdAt: {
+            $gte: start,
+            $lte: end,
+          },
+        }
+      : searchBy === "subcategory"
+      ? {
+          subcategory: value,
+          createdAt: {
+            $gte: start,
+            $lte: end,
+          },
+        }
+      : {
+          createdAt: {
+            $gte: start,
+            $lte: end,
+          },
+        }
+  ).lean();
 
   res
     .status(200)

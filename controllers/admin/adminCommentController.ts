@@ -52,12 +52,18 @@ export const getComments = async (
     })
     .lean()) as ICommentWithPostAndUser[];
 
-  const count = await Comment.countDocuments({
-    createdAt: {
-      $gte: start,
-      $lte: end,
-    },
-  }).lean();
+  const count = await Comment.countDocuments(
+    searchBy === "id"
+      ? {
+          _id: value,
+        }
+      : {
+          createdAt: {
+            $gte: start,
+            $lte: end,
+          },
+        }
+  ).lean();
 
   res.status(200).json({
     comments,

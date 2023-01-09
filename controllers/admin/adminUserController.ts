@@ -9,7 +9,7 @@ import { IQueryOptions } from "../../types/post.types.js";
 //@access   Private (admin)
 export const getUsers = async (
   req: Request,
-  res: Response<{ users: IUserInformation[] }>
+  res: Response<{ users: IUserInformation[]; count: number; pages: number }>
 ) => {
   const {
     searchBy = "",
@@ -32,7 +32,17 @@ export const getUsers = async (
     .select("-password -refreshToken")
     .lean();
 
-  res.status(200).json({ users });
+  const count = await User.countDocuments(
+    searchBy === "id"
+      ? { _id: value }
+      : searchBy === "username"
+      ? { username: { $regex: value, $options: "i" } }
+      : {}
+  );
+
+  res
+    .status(200)
+    .json({ users, count: users.length, pages: Math.ceil(count / limit) });
 };
 
 //@desc     Update user
