@@ -9,6 +9,7 @@ import dayjs from "dayjs";
 import { verifyObjectId } from "../utils/verifyObjectId.js";
 import { NotFoundError } from "../errors/notFoundError.js";
 import { Types } from "mongoose";
+import { IQueryOptions } from "../types/post.types.js";
 
 // @route   GET /api/comment/post/:id
 // @desc    Get all comments in a post
@@ -32,10 +33,10 @@ export const getSinglePostComments = async (
   const time = req.query.time;
   const page = req.query.page || 1;
   const limit = req.query.limit || 20;
-  const epochTime = dayjs.unix(0); // 1970-01-01T00:00:00.000Z
+  const epochTime = dayjs.unix(0);
   const currentDateAndTime = dayjs();
-  const oneTimeAgo = currentDateAndTime.subtract(1, time); // 1 day ago, 1 week ago, 1 month ago, 1 year ago
-  const startTime = oneTimeAgo.startOf(time || "day"); // date of the first day of the week, month, year
+  const oneTimeAgo = currentDateAndTime.subtract(1, time);
+  const startTime = oneTimeAgo.startOf(time || "day");
 
   verifyObjectId(id);
 
@@ -196,13 +197,12 @@ export const getUserComments = async (
   res: Response<{ comments: IComment[]; count: number; pages: number }>
 ) => {
   const { id } = req.params;
-  const page = req.query.page || 1;
-  const limit = req.query.limit || 25;
-  const sort = req.query.sort || "-createdAt";
+  const { page = 1, limit = 25 } = req.query as IQueryOptions;
+
   const comments = await Comment.find({ user: id })
     .limit(limit)
     .skip((page - 1) * limit)
-    .sort(sort)
+    .sort({ createdAt: -1 })
     .populate({
       path: "post",
       select: "_id title",
@@ -213,7 +213,7 @@ export const getUserComments = async (
     });
 
   const count = await Comment.countDocuments({
-    post: id,
+    user: id,
   }).lean();
 
   res.status(200).json({

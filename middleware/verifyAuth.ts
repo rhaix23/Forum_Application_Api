@@ -25,7 +25,9 @@ const verifyAuth = (req: Request, res: Response, next: NextFunction) => {
     };
 
     if (req.user.isDisabled) {
-      throw new ForbiddenError();
+      throw new ForbiddenError(
+        "User account is disabled. Please contact support."
+      );
     }
 
     next();

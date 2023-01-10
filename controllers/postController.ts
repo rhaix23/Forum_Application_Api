@@ -124,14 +124,18 @@ export const getSinglePost = async (
 // @access  Public
 export const getUserPosts = async (
   req: Request<{ id: string }>,
-  res: Response<{ posts: IPost[] }>
+  res: Response<{ posts: IPost[]; count: number; pages: number }>
 ) => {
   const { id } = req.params;
+  const { page = 1, limit = 25 } = req.query as IQueryOptions;
 
   verifyObjectId(id);
 
   const posts = await Post.where("user")
     .equals(id)
+    .limit(limit)
+    .skip((page - 1) * limit)
+    .sort({ createdAt: -1 })
     .populate({
       path: "user",
       select: "_id username",
@@ -140,7 +144,11 @@ export const getUserPosts = async (
     .populate("dislikes")
     .lean();
 
-  res.status(200).json({ posts });
+  const count = await Post.countDocuments({ user: id }).lean();
+
+  res
+    .status(200)
+    .json({ posts, count: posts.length, pages: Math.ceil(count / limit) });
 };
 
 // @route   POST /api/post

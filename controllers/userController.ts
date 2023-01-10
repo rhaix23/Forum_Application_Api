@@ -53,14 +53,14 @@ export const register = async (
 
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true,
-    secure: false,
+    secure: true,
     sameSite: "none",
     maxAge: 1000 * 60 * 60 * 24, // 1 day
   });
 
   res.cookie("accessToken", accessToken, {
     httpOnly: true,
-    secure: false,
+    secure: true,
     sameSite: "none",
     maxAge: 1000 * 60 * 60, // 1 hour
   });
@@ -95,7 +95,9 @@ export const login = async (
     throw new UnAuthenticatedError("Invalid credentials");
   }
   if (user.isDisabled) {
-    throw new ForbiddenError("User account is disabled");
+    throw new ForbiddenError(
+      "User account is disabled. Please contact support."
+    );
   }
 
   const { accessToken, refreshToken } = user.createAuthTokens();
@@ -104,14 +106,14 @@ export const login = async (
 
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true,
-    secure: false,
+    secure: true,
     sameSite: "none",
     maxAge: 1000 * 60 * 60 * 24, // 1 day
   });
 
   res.cookie("accessToken", accessToken, {
     httpOnly: true,
-    secure: false,
+    secure: true,
     sameSite: "none",
     maxAge: 1000 * 60 * 60, // 1 hour
   });
@@ -139,12 +141,12 @@ export const logout = async (req: Request, res: Response) => {
   if (!user) {
     res.clearCookie("refreshToken", {
       httpOnly: true,
-      secure: false,
+      secure: true,
       sameSite: "none",
     });
     res.clearCookie("accessToken", {
       httpOnly: true,
-      secure: false,
+      secure: true,
       sameSite: "none",
     });
     return res.sendStatus(200);
@@ -155,12 +157,12 @@ export const logout = async (req: Request, res: Response) => {
 
   res.clearCookie("refreshToken", {
     httpOnly: true,
-    secure: false,
+    secure: true,
     sameSite: "none",
   });
   res.clearCookie("accessToken", {
     httpOnly: true,
-    secure: false,
+    secure: true,
     sameSite: "none",
   });
 
@@ -282,7 +284,7 @@ export const handleRefreshToken = async (req: Request, res: Response) => {
 
     res.cookie("accessToken", accessToken, {
       httpOnly: true,
-      secure: false,
+      secure: true,
       sameSite: "none",
       maxAge: 1000 * 60 * 60, // 1 hour
     });
